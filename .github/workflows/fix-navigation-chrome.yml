@@ -1,0 +1,77 @@
+name: Fix navigation chrome
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[nav-chrome]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch navigation chrome
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = 'HYS_NAV_CHROME_V1'
+          if marker in s:
+              print('Patch already present')
+              raise SystemExit(0)
+          patch = r'''<script>
+          /* HYS_NAV_CHROME_V1 */
+          (function(){
+            "use strict";
+            const titles={
+              dashboard:"Genel Bakış",
+              cariler:"Cari Hesaplar",
+              bankalar:"Banka Hesapları",
+              kasa:"Kasalar",
+              transferler:"Para Transferleri",
+              cekler:"Çek / Senet",
+              faturalar:"Faturalar",
+              tahsilatlar:"Tahsilatlar",
+              raporlar:"Finansal Raporlar"
+            };
+            function sync(page){
+              page=page||location.hash.slice(1)||state.page||"dashboard";
+              if(!titles[page])page="dashboard";
+              state.page=page;
+              const text=titles[page];
+              const crumb=document.querySelector(".crumb");
+              const h1=document.querySelector(".topbar h1");
+              if(crumb)crumb.textContent="HİS Finans / "+text;
+              if(h1)h1.textContent=text;
+              document.querySelectorAll(".sidebar .nav").forEach(btn=>{
+                btn.classList.toggle("active",btn.textContent.trim().includes(text));
+              });
+            }
+            const oldNav=window.nav;
+            if(typeof oldNav==="function"){
+              window.nav=function(page){
+                oldNav(page);
+                sync(page);
+              };
+            }
+            window.addEventListener("hashchange",function(){
+              const page=location.hash.slice(1)||"dashboard";
+              sync(page);
+            });
+            sync(state.page);
+          })();
+          </script>'''
+          p.write_text(s.replace('</body>', patch+'\n</body>'), encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "[nav-chrome] Sync page header and sidebar state"
+          git push
