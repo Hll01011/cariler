@@ -2,8 +2,8 @@
 (function(){
   'use strict';
   /* 2026-08-15 tarihli son çalışan temiz kurulumun gerçek commit'i. */
-  var base='https://raw.githubusercontent.com/Hll01011/cariler/0cdf783313a8697864555f932b82167f9a710664/app.js';
-  /* Parser-blocking: index.html'deki finans eklentileri çekirdek uygulamadan sonra çalışmalı. */
+  var base='https://cdn.jsdelivr.net/gh/Hll01011/cariler@0cdf783313a8697864555f932b82167f9a710664/app.js';
+  /* Eski document.write/raw GitHub zincirini aynı şekilde koruyoruz; yalnızca CDN kullanıyoruz. */
   document.write('<script src="'+base+'"><\\/script>');
   /* Modal kaydetme kilidini finans mutation kilidinden ayır. */
   window.modal=function(title,html,save,label){
