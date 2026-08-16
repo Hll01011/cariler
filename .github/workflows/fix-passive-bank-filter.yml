@@ -1,0 +1,33 @@
+name: Fix passive bank filter
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix bank page key
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("state.page==='banks'", "state.page==='bankalar'")
+          s = s.replace("sig==='banks'", "sig==='bankalar'")
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit fix and remove one-time workflow
+        run: |
+          rm -f .github/workflows/fix-passive-bank-filter.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/fix-passive-bank-filter.yml
+          git commit -m "Fix passive bank filter page key"
+          git push
