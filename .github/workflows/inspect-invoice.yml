@@ -1,0 +1,24 @@
+name: Inspect invoice code
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-invoice.yml'
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          s=Path('index.html').read_text(encoding='utf-8')
+          for name in ['newInvoice','saveInvoice','faturalar']:
+              m=re.search(r'function '+re.escape(name)+r'\([^)]*\)',s)
+              print('\n===',name,'===')
+              if m:
+                  print(s[max(0,m.start()-300):m.start()+5000])
+              else: print('NOT FOUND')
