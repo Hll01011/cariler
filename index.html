@@ -252,7 +252,7 @@ window.addEventListener("hashchange",()=>{state.page=location.hash.slice(1)||"da
   'use strict';
   const HSF_BANK_PATCH={filter:'all',loaded:false,banks:[]};
   const H=()=>document.querySelector('.hsf-status-filter');
-  const bankPage=()=>typeof state!=='undefined' && state.page==='banks';
+  const bankPage=()=>typeof state!=='undefined' && state.page==='bankalar';
   const bankGrid=()=>document.querySelector('.account-grid');
   const moneyH=v=>new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY',maximumFractionDigits:2}).format(Number(v||0));
   async function loadBanks(){
@@ -298,7 +298,7 @@ window.addEventListener("hashchange",()=>{state.page=location.hash.slice(1)||"da
     document.querySelectorAll('select').forEach(sel=>sel.querySelectorAll('option').forEach(o=>{if(ids.has(String(o.value))){o.disabled=true;o.textContent=o.textContent.replace(/\s*—\s*PASİF$/,'')+' — PASİF';}}));
   }
   let last='';
-  const tick=()=>{const sig=(typeof state!=='undefined'&&state.page)||'';if(sig!==last){last=sig;if(sig==='banks')setTimeout(ensureFilter,40)}disablePassiveOptions();};
+  const tick=()=>{const sig=(typeof state!=='undefined'&&state.page)||'';if(sig!==last){last=sig;if(sig==='bankalar')setTimeout(ensureFilter,40)}disablePassiveOptions();};
   new MutationObserver(tick).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
   setInterval(tick,700);
   window.addEventListener('hashchange',()=>setTimeout(tick,40));
