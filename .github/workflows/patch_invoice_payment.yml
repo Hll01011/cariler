@@ -1,0 +1,34 @@
+name: Patch invoice payment consistency
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch invoice UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          new=r'''function newInvoice(){if(!state.data.cariler.length)return toast("Önce cari oluşturun.",true);openModal("Yeni Fatura",`<div class="notice"><b>Fatura yönünü seç:</b> Biz kestik = karşı taraf bize borçlanır. Bize geldi = biz karşı tarafa borçlanırız. Peşin ödeme/tahsilat seçersen banka veya kasa aynı işlemle işlenir; Vadeli / Sonra seçersen banka/kasa seçilemez.</div><div class="form"><div class="field full"><label>Fatura Türü *</label><select id="fty" class="select"><option value="satis">Biz Kestik — Satış Faturası</option><option value="alis">Bize Geldi — Alış Faturası</option></select></div><div class="field"><label>Cari *</label><select id="fc" class="select">${cariOptions()}</select></div><div class="field"><label>Fatura No</label><input id="fn" class="input"></div><div class="field"><label>Tarih</label><input id="fd" class="input" type="date" value="${dateNow()}"></div><div class="field"><label>Vade</label><input id="fv" class="input" type="date"></div><div class="field"><label>Ara Toplam</label><input id="fa" class="input" type="number" step="0.01" value="0"></div><div class="field"><label>KDV %</label><input id="fk" class="input" type="number" step="0.01" value="20"></div><div class="field"><label>KDV Tutarı</label><input id="fkt" class="input" type="number" step="0.01" value="0" readonly></div><div class="field"><label>Genel Toplam *</label><input id="ft" class="input" type="number" step="0.01" value="0" readonly></div><div class="field"><label>Ödeme / Tahsilat</label><select id="fo" class="select"><option value="">Vadeli / Sonra</option><option value="Bankadan">Bankadan</option><option value="Nakit">Nakit</option></select></div><div class="field"><label>Banka</label><select id="fb" class="select" disabled><option value="">Önce ödeme yöntemi seçin</option>${bankOptions()}</select></div><div class="field"><label>Kasa</label><select id="fkasa" class="select" disabled><option value="">Önce ödeme yöntemi seçin</option>${cashOptions()}</select></div><div class="field full"><label>Açıklama</label><textarea id="fdesc" class="textarea"></textarea></div></div>`,async()=>{const method=$("fo").value||null,bank=$("fb").value||null,cash=$("fkasa").value||null,kind=$("fty").value;if(bank&&cash)throw Error("Banka veya kasa seçin; ikisini birlikte kullanmayın.");if(!method&&(bank||cash))throw Error("Vadeli / Sonra seçiliyken banka veya kasa seçilemez.");if(method==="Bankadan"&&!bank)throw Error(kind==="alis"?"Bankadan ödeme için banka hesabı seçin.":"Bankadan tahsilat için banka hesabı seçin.");if(method==="Nakit"&&!cash)throw Error(kind==="alis"?"Nakit ödeme için kasa seçin.":"Nakit tahsilat için kasa seçin.");if(method!=="Bankadan"&&bank)throw Error("Banka seçimi için ödeme yöntemi Bankadan olmalıdır.");if(method!=="Nakit"&&cash)throw Error("Kasa seçimi için ödeme yöntemi Nakit olmalıdır.");const total=num($("ft").value);if(total<=0)throw Error("Fatura toplamı 0'dan büyük olmalıdır.");const id=await rpc("finans_fatura_ekle",{p_cari:$("fc").value,p_fatura_no:$("fn").value.trim()||null,p_tarih:$("fd").value,p_vade:$("fv").value||null,p_ara:num($("fa").value),p_kdv_oran:num($("fk").value),p_kdv:num($("fkt").value),p_total:total,p_odeme:method,p_aciklama:$("fdesc").value.trim()||null,p_banka:bank,p_kasa:cash,p_fatura_turu:kind});closeModal();await load();toast("Fatura kaydedildi. İşlem #"+await islemNo(id))});const sync=()=>{const method=$("fo").value,bank=$("fb"),cash=$("fkasa"),vade=$("fv");bank.disabled=method!=="Bankadan";cash.disabled=method!=="Nakit";vade.disabled=!!method;if(method!=="Bankadan")bank.value="";if(method!=="Nakit")cash.value="";if(method){vade.value="";}};$("fo").onchange=sync;sync();const calc=()=>{const ara=num($("fa").value),oran=num($("fk").value),kdv=Math.round(ara*oran)/100;$("fkt").value=kdv.toFixed(2);$("ft").value=(ara+kdv).toFixed(2)};$("fa").oninput=calc;$("fk").oninput=calc;calc()}'''
+          pattern=r'function newInvoice\(\).*?(?=function faturalar\(\))'
+          ns,n=re.subn(pattern,new+'\n',s,flags=re.S)
+          if n!=1:
+              raise SystemExit(f'newInvoice replacement count={n}')
+          p.write_text(ns,encoding='utf-8')
+          PY
+      - name: Commit patch and remove workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Fix invoice payment method consistency' || true
+          git rm .github/workflows/patch_invoice_payment.yml
+          git commit -m 'Remove one-time invoice patch workflow' || true
+          git push
