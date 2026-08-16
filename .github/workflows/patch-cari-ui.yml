@@ -1,0 +1,36 @@
+name: Patch Cari UI
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-cari-ui.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index.html
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '''function cariDetail(id){const c=state.data.cariler.find(x=>x.id===id),rows=state.data.cariMoves.filter(x=>x.cari_id===id);openModal("Cari Detay",`<div class="grid2"><div class="card" style="margin:0"><span class="mini">Cari</span><div class="stat-big">${esc(c?.unvan||"")}</div><p class="muted">${esc(c?.vergi_no||"Vergi/T.C. yok")} • ${esc(c?.telefon||"Telefon yok")}</p></div><div class="card" style="margin:0"><span class="mini">Güncel Bakiye</span><div class="stat-big ${balanceCari(id)>0?"danger-text":balanceCari(id)<0?"success-text":""}">${money(Math.abs(balanceCari(id)))}</div><p class="muted">${balanceCari(id)>0?"Borçlu":balanceCari(id)<0?"Alacaklı":"Kapalı"}</p></div></div><div style="margin-top:15px">${cariTable(rows,false)}</div>`,closeModal,"Kapat")}'''
+          new = '''function cariDetail(id){const c=state.data.cariler.find(x=>x.id===id),rows=state.data.cariMoves.filter(x=>x.cari_id===id);openModal("Cari Detay",`<div class="grid2"><div class="card" style="margin:0"><span class="mini">Cari</span><div class="stat-big">${esc(c?.unvan||"")}</div><p class="muted">${esc(c?.vergi_no||"Vergi/T.C. yok")} • ${esc(c?.telefon||"Telefon yok")}</p></div><div class="card" style="margin:0"><span class="mini">Güncel Bakiye</span><div class="stat-big ${balanceCari(id)>0?"danger-text":balanceCari(id)<0?"success-text":""}">${money(Math.abs(balanceCari(id)))}</div><p class="muted">${balanceCari(id)>0?"Borçlu":balanceCari(id)<0?"Alacaklı":"Kapalı"}</p></div></div><div class="actions" style="margin:15px 0"><button class="btn primary" onclick="closeModal();newCariMoveFor('${id}')">+ Cari Hareketi Ekle</button><button class="btn soft" onclick="closeModal();editCari('${id}')">Cariyi Düzenle</button></div><div style="margin-top:15px">${cariTable(rows,false)}</div>`,closeModal,"Kapat")}\nfunction newCariMoveFor(id){newCariMove();setTimeout(()=>{if($("mCari"))$("mCari").value=id},0)}'''
+          if old not in s:
+              raise SystemExit('Cari detay hedefi bulunamadı; dosya yapısı beklenenden farklı.')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit patched file
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'add cari movement action to detail'
+          git push
