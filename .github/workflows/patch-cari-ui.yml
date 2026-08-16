@@ -7,10 +7,15 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   patch:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Patch index.html
@@ -21,9 +26,55 @@ jobs:
           s = p.read_text(encoding='utf-8')
           old = '''function cariDetail(id){const c=state.data.cariler.find(x=>x.id===id),rows=state.data.cariMoves.filter(x=>x.cari_id===id);openModal("Cari Detay",`<div class="grid2"><div class="card" style="margin:0"><span class="mini">Cari</span><div class="stat-big">${esc(c?.unvan||"")}</div><p class="muted">${esc(c?.vergi_no||"Vergi/T.C. yok")} • ${esc(c?.telefon||"Telefon yok")}</p></div><div class="card" style="margin:0"><span class="mini">Güncel Bakiye</span><div class="stat-big ${balanceCari(id)>0?"danger-text":balanceCari(id)<0?"success-text":""}">${money(Math.abs(balanceCari(id)))}</div><p class="muted">${balanceCari(id)>0?"Borçlu":balanceCari(id)<0?"Alacaklı":"Kapalı"}</p></div></div><div style="margin-top:15px">${cariTable(rows,false)}</div>`,closeModal,"Kapat")}'''
           new = '''function cariDetail(id){const c=state.data.cariler.find(x=>x.id===id),rows=state.data.cariMoves.filter(x=>x.cari_id===id);openModal("Cari Detay",`<div class="grid2"><div class="card" style="margin:0"><span class="mini">Cari</span><div class="stat-big">${esc(c?.unvan||"")}</div><p class="muted">${esc(c?.vergi_no||"Vergi/T.C. yok")} • ${esc(c?.telefon||"Telefon yok")}</p></div><div class="card" style="margin:0"><span class="mini">Güncel Bakiye</span><div class="stat-big ${balanceCari(id)>0?"danger-text":balanceCari(id)<0?"success-text":""}">${money(Math.abs(balanceCari(id)))}</div><p class="muted">${balanceCari(id)>0?"Borçlu":balanceCari(id)<0?"Alacaklı":"Kapalı"}</p></div></div><div class="actions" style="margin:15px 0"><button class="btn primary" onclick="closeModal();newCariMoveFor('${id}')">+ Cari Hareketi Ekle</button><button class="btn soft" onclick="closeModal();editCari('${id}')">Cariyi Düzenle</button></div><div style="margin-top:15px">${cariTable(rows,false)}</div>`,closeModal,"Kapat")}\nfunction newCariMoveFor(id){newCariMove();setTimeout(()=>{if($("mCari"))$("mCari").value=id},0)}'''
-          if old not in s:
-              raise SystemExit('Cari detay hedefi bulunamadı; dosya yapısı beklenenden farklı.')
-          s = s.replace(old, new, 1)
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          marker = '<!-- HYS_UNIVERSAL_SORT_V1 -->'
+          if marker not in s:
+              patch = r'''<!-- HYS_UNIVERSAL_SORT_V1 -->
+<style>
+.hys-sortbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:9px 10px;background:#f8fafc;border:1px solid #e7edf4;border-radius:11px}
+.hys-sortbar span{font-size:10px;font-weight:850;color:#6b7b90;text-transform:uppercase;letter-spacing:.5px}
+.hys-sortbar select{min-width:190px;padding:8px 10px;border:1px solid #d8e1eb;border-radius:9px;background:#fff;color:#26364d;font-size:11px;font-weight:750}
+.hys-sortbar button{padding:8px 10px;border-radius:9px;background:#eef3f8;color:#33445c;font-size:11px;font-weight:800}
+</style>
+<script>
+(function(){
+  "use strict";
+  const H={};
+  const norm=s=>String(s||"").toLocaleLowerCase("tr-TR");
+  const moneyVal=s=>{let x=String(s||"").replace(/[^0-9,.-]/g,"").replace(/\./g,"").replace(",",".");return Number(x)||0};
+  const dateVal=s=>{let t=String(s||"").trim();let m=t.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]).getTime()||0;let d=Date.parse(t);return Number.isNaN(d)?0:d};
+  function headers(table){return [...table.querySelectorAll("thead th")].map(x=>norm(x.textContent));}
+  function colIndex(h,terms){for(const term of terms){const i=h.findIndex(x=>x.includes(term));if(i>=0)return i}return -1}
+  function addBar(wrap,table){
+    if(wrap.dataset.hysSortReady==="1")return;
+    wrap.dataset.hysSortReady="1";
+    const bar=document.createElement("div");bar.className="hys-sortbar";
+    bar.innerHTML='<span>Sırala</span><select aria-label="Liste sıralama"><option value="date_desc">Yeni → Eski</option><option value="date_asc">Eski → Yeni</option><option value="amount_desc">Tutar Büyük → Küçük</option><option value="amount_asc">Tutar Küçük → Büyük</option><option value="name_asc">A → Z</option><option value="name_desc">Z → A</option></select><button type="button">↺ Varsayılan</button>';
+    wrap.parentNode.insertBefore(bar,wrap);
+    const select=bar.querySelector("select"),reset=bar.querySelector("button");
+    const run=mode=>{
+      const hs=headers(table),rows=[...table.querySelectorAll("tbody tr")];
+      if(!rows.length)return;
+      const date=colIndex(hs,["tarih","işlem tarihi","vade"]),amount=colIndex(hs,["tutar","bakiye","toplam","borç","alacak"]);
+      let idx=0,cmp;
+      if(mode.startsWith("date")&&date>=0){idx=date;cmp=(a,b)=>dateVal(b.cells[idx]?.textContent)-dateVal(a.cells[idx]?.textContent)}
+      else if(mode.startsWith("amount")&&amount>=0){idx=amount;cmp=(a,b)=>moneyVal(b.cells[idx]?.textContent)-moneyVal(a.cells[idx]?.textContent)}
+      else{idx=hs.findIndex(x=>!x.includes("işlem")&&!x.includes("sil")&&!x.includes("düzenle"));if(idx<0)idx=0;cmp=(a,b)=>norm(a.cells[idx]?.textContent).localeCompare(norm(b.cells[idx]?.textContent),"tr",{sensitivity:"base"})}
+      const dir=mode.endsWith("asc")||mode.endsWith("desc")&&mode.startsWith("name")? (mode.endsWith("asc")?1:-1) : -1;
+      rows.sort((a,b)=>cmp(a,b)*dir).forEach(r=>table.tBodies[0].appendChild(r));
+    };
+    select.addEventListener("change",()=>run(select.value));
+    reset.addEventListener("click",()=>{select.value="date_desc";run("date_desc")});
+  }
+  function scan(){document.querySelectorAll(".table-wrap table").forEach(t=>{const w=t.closest(".table-wrap");if(w)addBar(w,t)})}
+  const observer=new MutationObserver(()=>{clearTimeout(H.timer);H.timer=setTimeout(scan,20)});
+  function start(){scan();observer.observe(document.getElementById("app")||document.body,{childList:true,subtree:true})}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
+})();
+</script>'''
+              s = s.replace('</body>', patch + '\n</body>', 1)
           p.write_text(s, encoding='utf-8')
           PY
       - name: Commit patched file
@@ -31,6 +82,13 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet && exit 0
-          git commit -m 'add cari movement action to detail'
-          git push
+          git diff --cached --quiet || (git commit -m 'add universal list sorting' && git push)
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload patched site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: '.'
+      - name: Deploy patched site
+        id: deployment
+        uses: actions/deploy-pages@v4
