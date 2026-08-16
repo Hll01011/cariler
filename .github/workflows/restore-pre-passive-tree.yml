@@ -1,0 +1,27 @@
+name: Restore pre passive feature tree
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-pre-passive-tree.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore pre-feature tree and commit normally
+        shell: bash
+        run: |
+          set -e
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git read-tree --reset -u cb3da9969a377d9888b9d269c343bc45815e9960
+          git add -A
+          git commit -m 'Remove active passive account feature'
+          git push origin main
