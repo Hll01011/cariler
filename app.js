@@ -1,27 +1,32 @@
-const SB_URL='https://qttgoxncdsbqycbkxvsl.supabase.co/rest/v1/';
-const SB_KEY='sb_publishable_g4oxZYNdgNkjpswa-c4P1g_uzUTu9s6';
-const S={page:'dashboard',cariler:[],cariMoves:[],banks:[],bankMoves:[],cash:[],cashMoves:[],checks:[],invoices:[],payments:[]};
-const $=id=>document.getElementById(id), esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m])), money=v=>new Intl.NumberFormat('tr-TR',{style:'currency',currency:'TRY'}).format(Number(v||0)), today=()=>new Date().toISOString().slice(0,10), dt=v=>v?new Date(v+'T00:00:00').toLocaleDateString('tr-TR'):'-';
-let busy=false;
-async function api(path,opt={}){const method=String(opt.method||'GET').toUpperCase();const h={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};if(method==='POST'||method==='PATCH')h.Prefer='return=representation';const r=await fetch(SB_URL+path,{...opt,headers:h});const t=await r.text();if(!r.ok)throw Error(t||r.statusText);return t?JSON.parse(t):null}
-function toast(m,bad=false){const x=$('toast');if(!x)return;x.textContent=m;x.className='toast '+(bad?'bad':'show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>x.className='toast',4000)}
-function closeModal(){$('modal')?.classList.remove('show')}
-/*
-  Modal kayıt kilidi ile finans mutation kilidini birbirinden ayır.
-  Eski sürümde modalSave busy=true yapıyor, ardından form callback'i mutate()
-  çağırınca mutate() busy gördüğü için hiç çalışmıyordu. Sonuç: Kaydet'e basılıyor
-  ama RPC'ye hiç gidilmiyordu. Artık buton kendi kilidini tutuyor; finans işleminin
-  busy kilidini mutate() yönetiyor.
+/* HİS Finans app loader
+   Çekirdek uygulama, son sağlam commit'in değişmez blob'undan yüklenir.
+   Bu dosya Supabase'e doğrudan erişmez; çekirdek app.js kendi mevcut API katmanını kullanır.
 */
-function modal(title,html,save,label='Kaydet'){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;const b=$('modalSave');b.textContent=label;b.dataset.saving='0';b.disabled=false;b.onclick=async()=>{if(b.dataset.saving==='1')return;b.dataset.saving='1';b.disabled=true;b.textContent='Kaydediliyor…';try{await save()}catch(e){toast(e.message||'İşlem başarısız',true)}finally{b.dataset.saving='0';b.disabled=false;b.textContent=label}};$('modal').classList.add('show')}
-async function mutate(work,msg){if(busy)return;busy=true;try{await work();await load();if(msg)toast(msg)}catch(e){toast(e.message||'İşlem başarısız',true)}finally{busy=false}}
-function nav(p){S.page=p;location.hash=p;closeSidebar();render()}
-function toggleSidebar(){$('side')?.classList.toggle('open');document.querySelector('.mobileShade')?.classList.toggle('show')}
-function closeSidebar(){$('side')?.classList.remove('open');document.querySelector('.mobileShade')?.classList.remove('show')}
-window.addEventListener('hashchange',()=>{S.page=location.hash.slice(1)||'dashboard';render()});
-function title(){return({dashboard:'Genel Bakış',cariler:'Cari Hesaplar',bankalar:'Bankalar',kasa:'Kasa',cekler:'Çek / Senet',faturalar:'Faturalar',tahsilatlar:'Tahsilatlar',raporlar:'Finansal Raporlar'}[S.page]||'Genel Bakış')}
-function navItem(p,i,t){return `<button class="nav ${S.page===p?'active':''}" onclick="nav('${p}')"><i>${i}</i><span>${t}</span></button>`}
-function shell(){return `<div class="app"><aside id="side"><div class="brand"><b>HİS FİNANS</b><small>Tek kaynaklı finans yönetimi</small></div><div class="navtitle">ANA MENÜ</div>${navItem('dashboard','▦','Genel Bakış')}${navItem('cariler','♟','Cari Hesaplar')}<div class="navtitle">PARA YÖNETİMİ</div>${navItem('bankalar','▤','Bankalar')}${navItem('kasa','▣','Kasa')}${navItem('cekler','◈','Çek / Senet')}<div class="navtitle">TİCARİ</div>${navItem('faturalar','▧','Faturalar')}${navItem('tahsilatlar','₺','Tahsilatlar')}${navItem('raporlar','◩','Finansal Raporlar')}<div class="sideLive">● Veritabanı canlı</div></aside><div class="mobileShade" onclick="closeSidebar()"></div><main><header><button class="hamb" onclick="toggleSidebar()">☰</button><div><small>HİS Finans / ${title()}</small><h1>${title()}</h1></div><span id="connection" class="live">● BAĞLANIYOR</span></header><div id="view"></div></main></div><div id="modal" class="modalBg"><div class="modal"><div class="modalTop"><h2 id="modalTitle"></h2><button onclick="closeModal()">×</button></div><div id="modalBody"></div><div class="modalFoot"><button class="ghost" onclick="closeModal()">Vazgeç</button><button id="modalSave" class="primary">Kaydet</button></div></div></div><div id="toast" class="toast"></div>`}
-async function load(){try{[S.cariler,S.cariMoves,S.banks,S.bankMoves,S.cash,S.cashMoves,S.checks,S.invoices,S.payments]=await Promise.all([api('cariler?select=*&order=created_at.desc'),api('cari_hareketleri?select=*&order=tarih.desc,created_at.desc'),api('banka_hareketleri?select=*&order=tarih.desc,created_at.desc'),api('banka_hesaplari?select=*&order=created_at.desc'),api('kasa_hesaplari?select=*&order=created_at.desc'),api('kasa_hareketleri?select=*&order=tarih.desc,created_at.desc'),api('cek_senetler?select=*&order=vade_tarihi.asc,created_at.desc'),api('faturalar?select=*&order=vade_tarihi.asc,created_at.desc'),api('tahsilatlar?select=*&order=tarih.desc,created_at.desc')]);const c=$('connection');if(c){c.textContent='● CANLI';c.className='live'}render()}catch(e){const c=$('connection');if(c){c.textContent='● HATA';c.className='live badLive'}toast('Supabase: '+e.message,true)}}
-function bankBal(id){const b=S.banks.find(x=>x.id===id);return Number(b?.acilis_bakiyesi||0)+S.bankMoves.filter(x=>x.banka_hesap_id===id).reduce((a,x)=>a+(String(x.tip).toLowerCase()==='giris'?1:-1)*Number(x.tutar||0),0)}
-function cashBal(id){const b=S.cash.find(x=>x.id===id);return Number(b?.acilis_bakiyesi||0)+S.cashMoves.filter(x=>x.kasa_id===id).reduce((a,x)=>a+(String(x.tip).toLowerCase()==='giris'?1:-1)*Number(x.tutar||0),0)}
+(function(){
+  'use strict';
+  var base='https://raw.githubusercontent.com/Hll01011/cariler/8f437f5863d6ece820315ea65f7480148d7ea395/app.js';
+  var s=document.createElement('script');
+  s.src=base;
+  s.onload=function(){
+    /* Modal kilidi ile finans mutation kilidini ayır. Eski modal(),
+       mutate() çağrısından önce busy=true yaptığı için V5 formları hiç
+       RPC'ye ulaşamıyordu. Burada yalnızca modal davranışını değiştiriyoruz. */
+    window.modal=function(title,html,save,label){
+      label=label||'Kaydet';
+      var titleEl=document.getElementById('modalTitle'), body=document.getElementById('modalBody'), b=document.getElementById('modalSave'), m=document.getElementById('modal');
+      if(!titleEl||!body||!b||!m)return;
+      titleEl.textContent=title; body.innerHTML=html; b.textContent=label; b.dataset.saving='0'; b.disabled=false;
+      b.onclick=async function(){
+        if(b.dataset.saving==='1')return;
+        b.dataset.saving='1'; b.disabled=true; b.textContent='Kaydediliyor…';
+        try{await save();}
+        catch(e){if(typeof window.toast==='function')window.toast(e.message||'İşlem başarısız',true);}
+        finally{b.dataset.saving='0';b.disabled=false;b.textContent=label;}
+      };
+      m.classList.add('show');
+    };
+    window.__HIS_MODAL_FIXED=true;
+  };
+  s.onerror=function(){console.error('HİS Finans çekirdek uygulaması yüklenemedi.');};
+  document.head.appendChild(s);
+})();
