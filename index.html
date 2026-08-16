@@ -78,5 +78,48 @@ function editCheck(islem){const x=state.data.checks.find(c=>c.islem_id===islem);
 async function voidTransaction(islem,type){const names={cari_hareket:"cari hareketi",manuel_banka:"banka hareketini",manuel_kasa:"kasa hareketini",fatura:"faturayı",tahsilat:"tahsilatı",transfer:"transferi",cek_senet:"çek/senedi"},fn={cari_hareket:"finans_cari_iptal",manuel_banka:"finans_manuel_banka_iptal",manuel_kasa:"finans_manuel_kasa_iptal",fatura:"finans_fatura_iptal",tahsilat:"finans_tahsilat_iptal",transfer:"finans_transfer_iptal",cek_senet:"finans_cek_iptal"}[type];if(!fn)return;if(!confirm(`${names[type]||"işlemi"} iptal edilsin mi? Bağlı yansımalar da birlikte yönetilecektir.`))return;await rpc(fn,{p_islem:islem});await load();toast("İşlem iptal edildi.")}
 window.addEventListener("hashchange",()=>{state.page=location.hash.slice(1)||"dashboard";render()});Object.assign(window,{nav,openSide,closeSide,closeModal,newCari,editCari,deactivateCari,activateCari,cariDetail,newCariMove,newBank,editBank,deactivateBank,bankDetail,newBankMove,newCash,editCash,deactivateCash,cashDetail,newCashMove,newInvoice,faturalar,newPayment,tahsilatlar,newTransfer,transferler,editTransfer,cekler,newCheck,checkStatus,checkReturn,raporlar,editTransaction,editCariMove,editBankMove,editCashMove,editInvoice,editPayment,editCheck,voidTransaction,showLinked,load});state.page=location.hash.slice(1)||"dashboard";render();load();
 </script>
+<!-- HYS_UNIVERSAL_SORT_V1 -->
+<style>.hys-sortbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:9px 10px;background:#f8fafc;border:1px solid #e7edf4;border-radius:11px}.hys-sortbar span{font-size:10px;font-weight:850;color:#6b7b90;text-transform:uppercase;letter-spacing:.5px}.hys-sortbar select{min-width:190px;padding:8px 10px;border:1px solid #d8e1eb;border-radius:9px;background:#fff;color:#26364d;font-size:11px;font-weight:750}.hys-sortbar button{padding:8px 10px;border-radius:9px;background:#eef3f8;color:#33445c;font-size:11px;font-weight:800}</style><script>
+/* HYS_UNIVERSAL_SORT_V1 */
+(function(){
+  "use strict";
+  const norm=s=>String(s||"").toLocaleLowerCase("tr-TR");
+  const amount=s=>{let x=String(s||"").replace(/[^0-9,.-]/g,"").replace(/\./g,"").replace(",",".");return Number(x)||0};
+  const date=s=>{let t=String(s||"").trim(),m=t.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]).getTime()||0;let d=Date.parse(t);return Number.isNaN(d)?0:d};
+  const indexOf=(heads,words)=>{for(const w of words){const i=heads.findIndex(h=>h.includes(w));if(i>=0)return i}return -1};
+  function sortTable(table,mode){
+    const heads=[...table.querySelectorAll("thead th")].map(x=>norm(x.textContent));
+    const rows=[...table.querySelectorAll("tbody tr")];
+    if(!rows.length||!table.tBodies.length)return;
+    const di=indexOf(heads,["tarih","işlem tarihi","vade"]);
+    const ai=indexOf(heads,["tutar","bakiye","toplam","borç","alacak"]);
+    const ni=indexOf(heads,["cari","unvan","banka","kasa","açıklama"]);
+    let cmp;
+    if(mode==="date_desc"&&di>=0)cmp=(a,b)=>date(b.cells[di]?.textContent)-date(a.cells[di]?.textContent);
+    else if(mode==="date_asc"&&di>=0)cmp=(a,b)=>date(a.cells[di]?.textContent)-date(b.cells[di]?.textContent);
+    else if(mode==="amount_desc"&&ai>=0)cmp=(a,b)=>amount(b.cells[ai]?.textContent)-amount(a.cells[ai]?.textContent);
+    else if(mode==="amount_asc"&&ai>=0)cmp=(a,b)=>amount(a.cells[ai]?.textContent)-amount(b.cells[ai]?.textContent);
+    else {const i=ni>=0?ni:0;cmp=(a,b)=>norm(a.cells[i]?.textContent).localeCompare(norm(b.cells[i]?.textContent),"tr",{sensitivity:"base"});if(mode==="name_desc"){const base=cmp;cmp=(a,b)=>base(b,a)}}
+    rows.sort(cmp).forEach(r=>table.tBodies[0].appendChild(r));
+  }
+  function addBar(table){
+    const wrap=table.closest(".table-wrap");
+    if(!wrap||wrap.previousElementSibling?.classList.contains("hys-sortbar"))return;
+    const bar=document.createElement("div");bar.className="hys-sortbar";
+    bar.innerHTML='<span>Sırala</span><select aria-label="Liste sıralama"><option value="date_desc">Yeni → Eski</option><option value="date_asc">Eski → Yeni</option><option value="amount_desc">Tutar Büyük → Küçük</option><option value="amount_asc">Tutar Küçük → Büyük</option><option value="name_asc">A → Z</option><option value="name_desc">Z → A</option></select><button type="button">↺ Varsayılan</button>';
+    wrap.parentNode.insertBefore(bar,wrap);
+    const select=bar.querySelector("select");
+    select.addEventListener("change",()=>sortTable(table,select.value));
+    bar.querySelector("button").addEventListener("click",()=>{select.value="date_desc";sortTable(table,"date_desc")});
+    sortTable(table,"date_desc");
+  }
+  function scan(){document.querySelectorAll(".table-wrap table").forEach(addBar)}
+  let timer;
+  const observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(scan,40)});
+  function start(){scan();observer.observe(document.getElementById("app")||document.body,{childList:true,subtree:true})}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
+})();
+
+</script>
 </body>
 </html>
