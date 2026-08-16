@@ -1,0 +1,23 @@
+name: Rollback active passive account feature
+
+on:
+  push:
+    paths:
+      - '.github/workflows/rollback-passive-feature.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore pre-feature state
+        shell: bash
+        run: |
+          set -e
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git reset --hard cb3da9969a377d9888b9d269c343bc45815e9960
+          git push --force origin main
