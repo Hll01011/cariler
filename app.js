@@ -1,12 +1,14 @@
-/* HİS Finans app core restore + modal deadlock fix */
+/* HİS Finans çekirdek yükleyici - sabit çalışan sürüm */
 (function(){
   'use strict';
-  var base='https://raw.githubusercontent.com/Hll01011/cariler/8f437f5863d6ece820315ea65f7480148d7ea395/app.js';
-  /* Parser-blocking load: finance V5/V6 scripts must see S/api/modal/render. */
+  /* 2026-08-15 tarihli son çalışan temiz kurulumun gerçek commit'i. */
+  var base='https://raw.githubusercontent.com/Hll01011/cariler/0cdf783313a8697864555f932b82167f9a710664/app.js';
+  /* Parser-blocking: index.html'deki finans eklentileri çekirdek uygulamadan sonra çalışmalı. */
   document.write('<script src="'+base+'"><\\/script>');
+  /* Modal kaydetme kilidini finans mutation kilidinden ayır. */
   window.modal=function(title,html,save,label){
     label=label||'Kaydet';
-    var titleEl=document.getElementById('modalTitle'), body=document.getElementById('modalBody'), b=document.getElementById('modalSave'), m=document.getElementById('modal');
+    var titleEl=document.getElementById('modalTitle'),body=document.getElementById('modalBody'),b=document.getElementById('modalSave'),m=document.getElementById('modal');
     if(!titleEl||!body||!b||!m)return;
     titleEl.textContent=title;body.innerHTML=html;b.textContent=label;b.dataset.saving='0';b.disabled=false;
     b.onclick=async function(){
