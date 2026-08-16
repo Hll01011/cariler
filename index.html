@@ -193,5 +193,47 @@ window.addEventListener("hashchange",()=>{state.page=location.hash.slice(1)||"da
   try{if(typeof render==="function")render()}catch(e){}
 })();
 </script>
+<script>
+/* HYS_NAV_CHROME_V1 */
+(function(){
+  "use strict";
+  const titles={
+    dashboard:"Genel Bakış",
+    cariler:"Cari Hesaplar",
+    bankalar:"Banka Hesapları",
+    kasa:"Kasalar",
+    transferler:"Para Transferleri",
+    cekler:"Çek / Senet",
+    faturalar:"Faturalar",
+    tahsilatlar:"Tahsilatlar",
+    raporlar:"Finansal Raporlar"
+  };
+  function sync(page){
+    page=page||location.hash.slice(1)||state.page||"dashboard";
+    if(!titles[page])page="dashboard";
+    state.page=page;
+    const text=titles[page];
+    const crumb=document.querySelector(".crumb");
+    const h1=document.querySelector(".topbar h1");
+    if(crumb)crumb.textContent="HİS Finans / "+text;
+    if(h1)h1.textContent=text;
+    document.querySelectorAll(".sidebar .nav").forEach(btn=>{
+      btn.classList.toggle("active",btn.textContent.trim().includes(text));
+    });
+  }
+  const oldNav=window.nav;
+  if(typeof oldNav==="function"){
+    window.nav=function(page){
+      oldNav(page);
+      sync(page);
+    };
+  }
+  window.addEventListener("hashchange",function(){
+    const page=location.hash.slice(1)||"dashboard";
+    sync(page);
+  });
+  sync(state.page);
+})();
+</script>
 </body>
 </html>
