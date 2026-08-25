@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/patch-cari-ui.yml'
+      - 'index.html'
       - 'sort.js'
       - 'movement-ui.js'
 
@@ -21,6 +22,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Connect application to current Supabase
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          index = Path('index.html')
+          s = index.read_text(encoding='utf-8')
+          s = s.replace('https://qttgoxncdsbqycbkxvsl.supabase.co/rest/v1/', 'https://bfwidcfvihwfnubhovdd.supabase.co/rest/v1/')
+          s = s.replace('sb_publishable_g4oxZYNdgNkjpswa-c4P1g_uzUTu9s6', 'sb_publishable_RfFpGHf6u196xmACJ7iLjg_aKskEcye')
+          index.write_text(s, encoding='utf-8')
+          PY
       - name: Inject sorting module
         shell: bash
         run: |
@@ -55,7 +67,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if ! git diff --cached --quiet; then
-            git commit -m 'add linked movement edit and cancel controls'
+            git commit -m 'restore cariler UI and connect current Supabase'
             git push
           fi
       - name: Setup Pages
