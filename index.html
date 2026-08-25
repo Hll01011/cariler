@@ -13,7 +13,7 @@
 <div id="app"></div><div id="modalBg" class="modal-bg"><div id="modal" class="modal"></div></div><div id="toast" class="toast"></div>
 <script>
 "use strict";
-const SB_URL="https://qttgoxncdsbqycbkxvsl.supabase.co/rest/v1/",SB_KEY="sb_publishable_g4oxZYNdgNkjpswa-c4P1g_uzUTu9s6";
+const SB_URL="https://bfwidcfvihwfnubhovdd.supabase.co/rest/v1/",SB_KEY="sb_publishable_RfFpGHf6u196xmACJ7iLjg_aKskEcye";
 const state={page:"dashboard",data:{cariler:[],banks:[],cash:[],checks:[],invoices:[],payments:[],transfers:[],islemler:[],cariMoves:[],bankMoves:[],cashMoves:[]},loading:false,busy:false};
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])),money=v=>new Intl.NumberFormat("tr-TR",{style:"currency",currency:"TRY",maximumFractionDigits:2}).format(Number(v||0)),num=v=>Number(v||0),dateNow=()=>new Date().toISOString().slice(0,10),fmtDate=v=>v?new Date(v+"T00:00:00").toLocaleDateString("tr-TR"):"—",normalize=s=>String(s??"").toLocaleLowerCase("tr-TR");
 function toast(msg,bad=false){const t=$("toast");t.textContent=msg;t.className="toast "+(bad?"bad":"show");clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.className="toast",4500)}function closeModal(){$("modalBg").classList.remove("show")}
