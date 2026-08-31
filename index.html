@@ -234,5 +234,47 @@ window.addEventListener("hashchange",()=>{state.page=location.hash.slice(1)||"da
   sync(state.page);
 })();
 </script>
-</body>
+
+<!-- HYS_DASHBOARD_CARI_OVERVIEW_V1 -->
+<style>
+.dashboard-cari-note{max-width:520px;white-space:normal;line-height:1.45}
+.dashboard-cari-row{cursor:pointer}
+.dashboard-cari-row:hover{background:#f8fbff}
+.dashboard-cari-balance{font-weight:850}
+</style>
+<script>
+/* HYS_DASHBOARD_CARI_OVERVIEW_V1 */
+(function(){
+  "use strict";
+  if(typeof dashboard!=="function")return;
+  const oldDashboard=dashboard;
+  dashboard=function(){
+    oldDashboard();
+    const host=document.getElementById("content");
+    if(!host||!state||!state.data)return;
+    const cariler=(state.data.cariler||[]).slice(0,8);
+    const rows=cariler.map(c=>{
+      const note=c.notlar||c.risk_notu||"Açıklama girilmemiş.";
+      const bakiye=typeof balanceCari==="function"?balanceCari(c.id):0;
+      const durum=bakiye>0?"BORÇLU":bakiye<0?"ALACAKLI":"KAPALI";
+      const cls=bakiye>0?"bad":bakiye<0?"good":"";
+      return `<tr class="dashboard-cari-row" onclick="cariDetail('${esc(c.id)}')">
+        <td><b>${esc(c.unvan||c.ad||"—")}</b><br><small>${esc(c.yetkili||"Yetkili belirtilmemiş")}</small></td>
+        <td>${esc(c.telefon||c.email||"İletişim bilgisi yok")}</td>
+        <td class="dashboard-cari-note">${esc(note)}</td>
+        <td><span class="pill ${cls}">${durum}</span></td>
+        <td class="num dashboard-cari-balance">${money(Math.abs(bakiye))}</td>
+      </tr>`;
+    }).join("")||`<tr><td colspan="5" class="empty">Henüz cari kaydı yok.</td></tr>`;
+    const card=document.createElement("div");
+    card.className="card";
+    card.id="dashboardCariOverview";
+    card.innerHTML=`<div class="card-head"><div><h3>Son Eklenen Cariler</h3><div class="mini">Cari sayfasına girmeden cari bilgileri ve açıklamaları buradan görebilirsiniz.</div></div><button class="btn soft" onclick="nav('cariler')">Tüm Cariler</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Cari</th><th>İletişim</th><th>Açıklama / Not</th><th>Durum</th><th class="num">Bakiye</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    const target=[...host.querySelectorAll(".card")].find(x=>x.querySelector(".card-head h3")?.textContent?.includes("Son Cari Hareketleri"));
+    if(target)target.parentNode.insertBefore(card,target); else host.appendChild(card);
+  };
+  try{if(state.page==="dashboard"&&!state.loading)dashboard()}catch(e){console.error("Dashboard cari görünümü:",e)}
+})();
+</script>
+\n</body>
 </html>
